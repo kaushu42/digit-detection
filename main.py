@@ -2,10 +2,11 @@ import sys
 
 import numpy as np
 
+import cv2
+
 import keras
 from keras.models import Sequential, load_model
 from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
-from keras.utils import to_categorical
 
 mode = 'test'
 try:
@@ -17,17 +18,12 @@ try:
         raise Exception('Enter valid argument')
 except IndexError as e:
     pass
+
+x = np.load('./Images/inputs.npy')
+y = np.load('./Labels/labels.npy').reshape(-1, 1, 1, 5)
+print(x.shape, y.shape)
+
 if mode == 'train':
-    ROWS, COLS = 28, 28
-    CLASSES = 10
-    TRAIN_DATA = 60000
-    TEST_DATA = 10000
-
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = x_train.reshape(TRAIN_DATA, ROWS, COLS, 1)*1/255
-    x_test = x_test.reshape(TEST_DATA, ROWS, COLS, 1)*1/255
-    y_test = (y_test == 1)
-
     model = Sequential()
     model.add(Conv2D(filters=16, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu', input_shape=(28, 28, 1)))
     model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), activation='relu'))
@@ -36,20 +32,36 @@ if mode == 'train':
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Conv2D(filters=128, kernel_size=(5, 5), strides=(1, 1), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(filters=5, kernel_size=(1, 1), activation=None))
-    # model.add(Flatten())
-    # model.add(Dense(10, activation='relu'))
-    # model.add(Dense(1, activation='sigmoid'))
+    model.add(Conv2D(filters=5, kernel_size=(1, 1), activation='relu'))
     print(model.summary())
-    # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    # model.fit(x_test, y_test, epochs=5, batch_size=128, verbose=1)
-    # model.save('./weights/model.h5')
+    model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
+    model.fit(x, y, epochs=50, batch_size=1, verbose=1)
+    model.save('./weights/model.h5')
 else:
     try:
         model = load_model('./weights/model.h5')
         print('\n*****Model Loaded*****')
     except:
         raise Exception('Cannot Load Model file, train first')
-    data = np.load('test.npz')
-    score = model.evaluate(data['arr_0'], data['arr_1'])
-    print(score)
+    predictions = model.predict(x).reshape(-1, 5)
+    for i in range(len(y)):
+        xmin = int(predictions[i][1]*28)
+        ymin = int(predictions[i][2]*28)
+        xmax = int(predictions[i][3]*28)
+        ymax = int(predictions[i][4]*28)
+        print((xmin, ymin), (xmax, ymax))
+        cv2.rectangle(x[i], (xmin, ymin), (xmax, ymax), (255, 0, 0), 1)
+        cv2.imshow('Image', x[i])
+        cv2.waitKey()
+    # (_, _), (x_test, _) = keras.datasets.mnist.load_data()
+    # predictions = model.predict(x_test.reshape(-1, 28, 28, 1)).reshape(-1, 5)
+    # print(predictions)
+    # for i in range(len(y)):
+    #     xmin = int(predictions[i][1]*28)
+    #     ymin = int(predictions[i][2]*28)
+    #     xmax = int(predictions[i][3]*28)
+    #     ymax = int(predictions[i][4]*28)
+    #     print((xmin, ymin), (xmax, ymax))
+    #     cv2.rectangle(x_test[i], (xmin, ymin), (xmax, ymax), (255, 0, 0), 1)
+    #     cv2.imshow('Image', x_test[i])
+    #     cv2.waitKey()
