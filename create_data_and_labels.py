@@ -32,4 +32,4 @@ print(np.asarray(images).shape)
 np.save('./Images/inputs.npy', np.asarray(images))
 print(np.asarray(labels).shape)
 np.save('./Labels/labels.npy', np.asarray(labels))
-print(np.asarray(labels)*28)
+
